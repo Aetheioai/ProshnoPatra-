@@ -1,0 +1,6 @@
+{
+  "name": "ProshnoPatra — Exam & Question Paper Maker",
+  "description": "Offline-first Bangladeshi school, college, and board-style A4 question paper maker for teachers (Class 1 to HSC) with CQ, MCQ, LaTeX math, and native PDF export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

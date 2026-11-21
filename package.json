@@ -1,0 +1,47 @@
+{
+  "name": "proshnopatra",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Offline-first Bangladeshi school, college, and board-style A4 exam and question paper maker with CQ, MCQ, visual LaTeX math, and PDF export.",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "question-paper",
+    "exam-maker",
+    "bangladesh",
+    "nctb",
+    "latex",
+    "katex",
+    "pwa",
+    "pdf",
+    "education"
+  ],
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist dev-dist"
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
+    "katex": "^0.19.1",
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-pwa": "^2.0.0"
+  }
+}

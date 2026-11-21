@@ -1,0 +1,178 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+@theme {
+  --breakpoint-xs: 24rem;
+}
+
+@layer base {
+  :root {
+    --font-ui: "Plus Jakarta Sans", "Noto Sans Bengali", "SolaimanLipi", "Kalpurush", system-ui, -apple-system, sans-serif;
+    --font-paper-serif: "Noto Serif Bengali", "Source Serif 4", "Kalpurush", "SolaimanLipi", "Nikosh", Georgia, serif;
+    --font-paper-sans: "Noto Sans Bengali", "Plus Jakarta Sans", "SolaimanLipi", "Vrinda", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  }
+
+  html {
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: var(--font-ui);
+    background-color: #f8f9fa;
+    color: #111827;
+    overscroll-behavior-y: none;
+  }
+
+  /* Crisp focus rings for keyboard accessibility */
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid #0f4c81;
+    outline-offset: 1px;
+  }
+}
+
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.font-paper-serif {
+  font-family: var(--font-paper-serif);
+}
+
+.font-paper-sans {
+  font-family: var(--font-paper-sans);
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Authentic Bangladeshi 2-column MCQ board layout */
+.paper-two-col {
+  column-count: 2;
+  column-gap: 7mm;
+  column-rule: 0.75px solid #9ca3af;
+}
+
+/* Keep KaTeX crisp and proportional to surrounding Bangla/English text */
+.paper-sheet .katex {
+  font-size: 1.04em;
+  line-height: 1.2;
+}
+
+[data-math-chip="true"] .katex {
+  font-size: 0.96em;
+  line-height: 1.15;
+}
+
+.paper-sheet .katex-display {
+  margin: 0.45em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Prevent awkward mid-question splits */
+.question-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.section-heading-block {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Print Engine: Native vector PDF output with zero UI chrome */
+@page {
+  size: A4 portrait;
+  margin: 12mm 13mm 14mm 13mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  .paper-sheet {
+    width: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .page-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .page-guide-line {
+    display: none !important;
+  }
+}
+
+/* Subtle custom scrollbars for split panes */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 3px;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
