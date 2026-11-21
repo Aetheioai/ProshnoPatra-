@@ -6,8 +6,8 @@ Thank you for your interest in improving ProshnoPatra! This guide explains how t
 
 1. Fork the repository and clone your fork:
    ```bash
-   git clone https://github.com/<your-username>/proshnopatra.git
-   cd proshnopatra
+   git clone https://github.com/aetheioai/ProshnoPatra-.git
+   cd ProshnoPatra-
    ```
 2. Install dependencies:
    ```bash

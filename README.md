@@ -1,5 +1,11 @@
 # ProshnoPatra
 
+[![CI](https://github.com/aetheioai/ProshnoPatra-/actions/workflows/ci.yml/badge.svg)](https://github.com/aetheioai/ProshnoPatra-/actions/workflows/ci.yml)
+[![Deploy to GitHub Pages](https://github.com/aetheioai/ProshnoPatra-/actions/workflows/deploy.yml/badge.svg)](https://github.com/aetheioai/ProshnoPatra-/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-zinc.svg)](LICENSE)
+
+**Live App:** [https://aetheioai.github.io/ProshnoPatra-/](https://aetheioai.github.io/ProshnoPatra-/)
+
 Offline-first exam and question paper maker for Bangladeshi schools, colleges, and board-style assessments (Class 1 through HSC). Build print-ready A4 papers with Creative Questions (CQ), 2-column MCQs, reading passages, tables, diagrams, and typeset math or chemistry equations—completely in the browser with no backend or accounts required.
 
 ## Features
@@ -38,8 +44,8 @@ Offline-first exam and question paper maker for Bangladeshi schools, colleges, a
 ### Installation & Local Development
 
 ```bash
-git clone https://github.com/<your-username>/proshnopatra.git
-cd proshnopatra
+git clone https://github.com/aetheioai/ProshnoPatra-.git
+cd ProshnoPatra-
 npm install
 npm run dev
 ```
@@ -55,6 +61,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. No environm
 | `npm run preview` | Preview the production build locally |
 | `npm run typecheck` | Run TypeScript strict type checking (`tsc --noEmit`) |
 | `npm run clean` | Remove generated `dist/` and `dev-dist/` folders |
+
+## Deployment
+
+- **GitHub Pages (included)**: Every push to `main` automatically builds and deploys `dist/` via `.github/workflows/deploy.yml` with `VITE_BASE_PATH` set to the repository name. Enable **Settings → Pages → Source: GitHub Actions** on any fork to publish your own live copy.
+- **Root-domain static hosts** (Cloudflare Pages, Vercel, Netlify): Run `npm run build` and publish `dist/` with no extra configuration (`VITE_BASE_PATH` defaults to `/`).
 
 ## Project Structure
 
