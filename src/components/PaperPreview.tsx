@@ -23,6 +23,9 @@ import { RichMathText } from './RichMathText';
 interface PaperPreviewProps {
   paper: ExamPaper;
   zoom: 'fit' | number;
+  activeQuestionId?: string | null;
+  onSelectHeader?: () => void;
+  onSelectQuestion?: (questionId: string) => void;
 }
 
 const SheetImage: React.FC<{ image: AttachedImage; maxH?: string }> = ({ image, maxH }) => {
@@ -399,7 +402,13 @@ const RenderTableBlock: React.FC<{ item: TableBlockItem; num: number; lang: Lang
   );
 };
 
-export const PaperPreview: React.FC<PaperPreviewProps> = ({ paper, zoom }) => {
+export const PaperPreview: React.FC<PaperPreviewProps> = ({
+  paper,
+  zoom,
+  activeQuestionId,
+  onSelectHeader,
+  onSelectQuestion,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const [fitScale, setFitScale] = useState(1);
@@ -548,7 +557,13 @@ export const PaperPreview: React.FC<PaperPreviewProps> = ({ paper, zoom }) => {
           ))}
 
           {/* Authentic Bangladeshi Board-Style Paper Header */}
-          <header className="relative pb-2.5 mb-3">
+          <header
+            onClick={onSelectHeader}
+            title={onSelectHeader ? 'Click to edit header' : undefined}
+            className={`relative pb-2.5 mb-3 rounded transition-colors ${
+              onSelectHeader ? 'cursor-pointer hover:bg-[#0F4C81]/[0.04] print:hover:bg-transparent' : ''
+            }`}
+          >
             {/* Top corner boxes: Subject Code (left) & Set Code (right) */}
             {(subjectCodeDigits.length > 0 || header.setCode) && (
               <div className="flex items-start justify-between text-[0.88em] mb-1">
@@ -674,7 +689,28 @@ export const PaperPreview: React.FC<PaperPreviewProps> = ({ paper, zoom }) => {
             </div>
           ) : (
             <div className={settings.columns === 2 ? 'paper-two-col' : ''}>
-              {numberedItems.map((entry) => renderQuestion(entry))}
+              {numberedItems.map((entry) => {
+                const isActive = activeQuestionId === entry.item.id;
+                return (
+                  <div
+                    key={entry.item.id}
+                    onClick={
+                      onSelectQuestion ? () => onSelectQuestion(entry.item.id) : undefined
+                    }
+                    className={`rounded transition-colors ${
+                      onSelectQuestion
+                        ? 'cursor-pointer hover:bg-[#0F4C81]/[0.04] print:hover:bg-transparent'
+                        : ''
+                    } ${
+                      isActive
+                        ? 'ring-1 ring-[#0F4C81]/35 bg-[#0F4C81]/[0.03] print:ring-0 print:bg-transparent'
+                        : ''
+                    }`}
+                  >
+                    {renderQuestion(entry)}
+                  </div>
+                );
+              })}
             </div>
           )}
 

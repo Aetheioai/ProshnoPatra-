@@ -3,15 +3,23 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { EDUCATION_LEVELS, getSubjectsForLevel } from '../data/curriculum';
 import { EducationLevel, Language, PaperHeader } from '../types/paper';
 import { formatDigits } from '../utils/formatters';
+import { UI_COPY, UiLang } from '../data/uiCopy';
 import { ImageAttachmentControl } from './ImageAttachmentControl';
 
 interface HeaderEditorProps {
   header: PaperHeader;
   language: Language;
+  uiLang?: UiLang;
   onChange: (next: PaperHeader) => void;
 }
 
-export const HeaderEditor: React.FC<HeaderEditorProps> = ({ header, language, onChange }) => {
+export const HeaderEditor: React.FC<HeaderEditorProps> = ({
+  header,
+  language,
+  uiLang = 'bn',
+  onChange,
+}) => {
+  const t = UI_COPY[uiLang];
   const [showMore, setShowMore] = useState(false);
   const levelInfo = EDUCATION_LEVELS.find((l) => l.id === header.level) ?? EDUCATION_LEVELS[2];
   const subjects = getSubjectsForLevel(header.level);
@@ -37,17 +45,15 @@ export const HeaderEditor: React.FC<HeaderEditorProps> = ({ header, language, on
   return (
     <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-zinc-900">Paper Setup</h2>
-        <p className="text-xs text-zinc-500 mt-1">
-          Fill in the basics for your exam header. Changes appear live on the A4 sheet.
-        </p>
+        <h2 className="text-base font-semibold text-zinc-900">{t.paperSetupTitle}</h2>
+        <p className="text-xs text-zinc-500 mt-1">{t.paperSetupDesc}</p>
       </div>
 
       {/* 5 Essential Fields */}
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-zinc-700 mb-1.5">
-            1. Institute Name
+            {t.instituteName}
           </label>
           <input
             type="text"
@@ -60,7 +66,7 @@ export const HeaderEditor: React.FC<HeaderEditorProps> = ({ header, language, on
 
         <div>
           <label className="block text-xs font-medium text-zinc-700 mb-1.5">
-            2. Exam Name
+            {t.examName}
           </label>
           <input
             type="text"
@@ -73,7 +79,7 @@ export const HeaderEditor: React.FC<HeaderEditorProps> = ({ header, language, on
 
         <div className="space-y-2.5">
           <label className="block text-xs font-medium text-zinc-700">
-            3. Level &amp; Subject
+            {t.levelSubject}
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <select
@@ -95,7 +101,7 @@ export const HeaderEditor: React.FC<HeaderEditorProps> = ({ header, language, on
               onChange={(e) => handleSubjectPick(e.target.value)}
               className="w-full text-base sm:text-sm px-2.5 py-2.5 sm:py-2 border border-zinc-200 rounded bg-white text-zinc-700"
             >
-              <option value="">Choose NCTB subject...</option>
+              <option value="">{t.chooseNctbSubject}</option>
               {subjects.map((sub) => (
                 <option key={sub.id} value={sub.id}>
                   {sub.nameEn} — {sub.nameBn}
@@ -115,7 +121,7 @@ export const HeaderEditor: React.FC<HeaderEditorProps> = ({ header, language, on
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-zinc-700 mb-1.5">
-              4. Time
+              {t.timeLabel}
             </label>
             <input
               type="text"
@@ -128,7 +134,7 @@ export const HeaderEditor: React.FC<HeaderEditorProps> = ({ header, language, on
 
           <div>
             <label className="block text-xs font-medium text-zinc-700 mb-1.5">
-              5. Full Marks
+              {t.fullMarksLabel}
             </label>
             <input
               type="text"
@@ -155,11 +161,11 @@ export const HeaderEditor: React.FC<HeaderEditorProps> = ({ header, language, on
               <ChevronRight className="w-4 h-4 text-zinc-500" />
             )}
             <span className="text-sm font-medium text-zinc-800 group-hover:text-zinc-950">
-              More Paper Details
+              {t.morePaperDetails}
             </span>
           </div>
           <span className="text-xs text-zinc-400">
-            {showMore ? 'Hide optional fields' : 'Class, codes, instructions, logo'}
+            {showMore ? t.hideOptional : t.optionalSummary}
           </span>
         </button>
 

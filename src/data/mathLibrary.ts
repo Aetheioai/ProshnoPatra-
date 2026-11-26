@@ -8,7 +8,7 @@ export interface SymbolItem {
 export interface FormulaPreset {
   id: string;
   title: string;
-  category: 'Algebra' | 'Geometry & Trig' | 'Calculus' | 'Physics' | 'Chemistry';
+  category: 'Algebra' | 'Geometry & Trig' | 'Calculus' | 'Physics' | 'Chemistry' | 'Biology';
   latex: string;
   keywords: string;
 }
@@ -368,5 +368,49 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
     category: 'Chemistry',
     latex: '{}_{92}^{235}\\text{U} + {}_{0}^{1}\\text{n} \\rightarrow {}_{56}^{141}\\text{Ba} + {}_{36}^{92}\\text{Kr} + 3{}_{0}^{1}\\text{n}',
     keywords: 'nuclear fission isotope physics chemistry',
+  },
+
+  // Biology
+  {
+    id: 'photosynthesis',
+    title: 'Photosynthesis (সালোকসংশ্লেষণ)',
+    category: 'Biology',
+    latex: '6\\text{CO}_{2} + 12\\text{H}_{2}\\text{O} \\xrightarrow[\\text{Chlorophyll}]{\\text{Light}} \\text{C}_{6}\\text{H}_{12}\\text{O}_{6} + 6\\text{O}_{2} + 6\\text{H}_{2}\\text{O}',
+    keywords: 'photosynthesis biology plant glucose oxygen',
+  },
+  {
+    id: 'respiration',
+    title: 'Aerobic Respiration (সবাত শ্বসন)',
+    category: 'Biology',
+    latex: '\\text{C}_{6}\\text{H}_{12}\\text{O}_{6} + 6\\text{O}_{2} \\rightarrow 6\\text{CO}_{2} + 6\\text{H}_{2}\\text{O} + 38\\text{ ATP}',
+    keywords: 'respiration biology atp energy glucose',
+  },
+  {
+    id: 'hardy-weinberg',
+    title: 'Hardy-Weinberg Equation',
+    category: 'Biology',
+    latex: 'p^{2} + 2pq + q^{2} = 1',
+    keywords: 'genetics allele frequency biology evolution',
+  },
+  {
+    id: 'bmi-formula',
+    title: 'BMI (দেহ ভর সূচক)',
+    category: 'Biology',
+    latex: '\\text{BMI} = \\frac{\\text{Weight (kg)}}{\\left(\\text{Height (m)}\\right)^{2}}',
+    keywords: 'bmi nutrition health biology',
+  },
+  {
+    id: 'magnification',
+    title: 'Microscope Magnification',
+    category: 'Biology',
+    latex: 'M = \\frac{\\text{Image Size}}{\\text{Actual Size}}',
+    keywords: 'microscope cell magnification biology',
+  },
+  {
+    id: 'mendel-cross',
+    title: 'Mendel F₁ Cross (♂ × ♀)',
+    category: 'Biology',
+    latex: '\\text{Tt (♂)} \\times \\text{Tt (♀)} \\rightarrow F_{2}\\ (3:1)',
+    keywords: 'mendel genetics cross male female biology',
   },
 ];

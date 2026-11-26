@@ -6,11 +6,13 @@ import {
   countNumberedQuestions,
   parseNumericMarks,
 } from '../utils/formatters';
+import { UI_COPY, UiLang } from '../data/uiCopy';
 import { PWAInstallButton } from './PWAInstallButton';
 
 interface StylePrintStepProps {
   paper: ExamPaper;
   isExporting: boolean;
+  uiLang?: UiLang;
   onChangeSettings: (patch: Partial<PaperSettings>) => void;
   onDownloadPdf: () => void;
   onPrint: () => void;
@@ -19,10 +21,12 @@ interface StylePrintStepProps {
 export const StylePrintStep: React.FC<StylePrintStepProps> = ({
   paper,
   isExporting,
+  uiLang = 'bn',
   onChangeSettings,
   onDownloadPdf,
   onPrint,
 }) => {
+  const t = UI_COPY[uiLang];
   const { settings, header, questions } = paper;
   const hasMcqs = questions.some((q) => q.type === 'mcq');
   const qCount = countNumberedQuestions(questions);
@@ -37,16 +41,14 @@ export const StylePrintStep: React.FC<StylePrintStepProps> = ({
   return (
     <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-zinc-900">Style &amp; Print</h2>
-        <p className="text-xs text-zinc-500 mt-1">
-          Adjust language, page columns, and typography before downloading or printing your A4 PDF.
-        </p>
+        <h2 className="text-base font-semibold text-zinc-900">{t.stylePrintTitle}</h2>
+        <p className="text-xs text-zinc-500 mt-1">{t.stylePrintDesc}</p>
       </div>
 
       {/* Language Toggle */}
       <div className="space-y-2">
         <label className="block text-xs font-medium text-zinc-700">
-          Paper Language &amp; Numbering
+          {t.paperLangNumbering}
         </label>
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -91,7 +93,7 @@ export const StylePrintStep: React.FC<StylePrintStepProps> = ({
 
       {/* Column Layout */}
       <div className="space-y-2">
-        <label className="block text-xs font-medium text-zinc-700">Page Layout</label>
+        <label className="block text-xs font-medium text-zinc-700">{t.pageLayout}</label>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -104,13 +106,13 @@ export const StylePrintStep: React.FC<StylePrintStepProps> = ({
           >
             <Rows2 className="w-4 h-4 shrink-0" />
             <div className="text-left">
-              <div className="text-xs font-semibold">1-Column</div>
+              <div className="text-xs font-semibold">{t.oneColumn}</div>
               <div
                 className={`text-[11px] ${
                   settings.columns === 1 ? 'text-zinc-300' : 'text-zinc-500'
                 }`}
               >
-                Written &amp; CQ papers
+                {t.oneColumnDesc}
               </div>
             </div>
           </button>
@@ -126,13 +128,13 @@ export const StylePrintStep: React.FC<StylePrintStepProps> = ({
           >
             <Columns2 className="w-4 h-4 shrink-0" />
             <div className="text-left">
-              <div className="text-xs font-semibold">2-Column</div>
+              <div className="text-xs font-semibold">{t.twoColumn}</div>
               <div
                 className={`text-[11px] ${
                   settings.columns === 2 ? 'text-zinc-300' : 'text-zinc-500'
                 }`}
               >
-                Board-style MCQ
+                {t.twoColumnDesc}
               </div>
             </div>
           </button>
@@ -141,7 +143,7 @@ export const StylePrintStep: React.FC<StylePrintStepProps> = ({
 
       {/* Font Style */}
       <div className="space-y-2">
-        <label className="block text-xs font-medium text-zinc-700">Font Style</label>
+        <label className="block text-xs font-medium text-zinc-700">{t.fontStyle}</label>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"

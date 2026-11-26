@@ -30,7 +30,9 @@ import { TemplateLibraryModal } from './components/TemplateLibraryModal';
 import { QuickMathTemplateKey, VisualMathModal } from './components/VisualMathModal';
 import { ActiveMathTarget, MathEditRequest } from './components/VisualRichInput';
 import { STARTER_PRESETS } from './data/curriculum';
+import { UI_COPY, UiLang } from './data/uiCopy';
 import { ExamPaper, PaperSettings, QuestionItem } from './types/paper';
+import { parseBulkMcqs } from './utils/bulkMcqParser';
 import { exportPaperToPdf, triggerSmartPrint } from './utils/pdfExport';
 import {
   calculateTotalMarks,
@@ -103,6 +105,27 @@ export default function App() {
   const [zoom, setZoom] = useState<'fit' | number>('fit');
   const [notice, setNotice] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [uiLang, setUiLang] = useState<UiLang>(() => {
+    try {
+      const saved = localStorage.getItem('proshnopatra_ui_lang_v1');
+      return saved === 'en' ? 'en' : 'bn';
+    } catch {
+      return 'bn';
+    }
+  });
+  const [quickPasteOpen, setQuickPasteOpen] = useState(false);
+  const [quickPasteText, setQuickPasteText] = useState('');
+
+  const t = UI_COPY[uiLang];
+
+  const toggleUiLang = (next: UiLang) => {
+    setUiLang(next);
+    try {
+      localStorage.setItem('proshnopatra_ui_lang_v1', next);
+    } catch {
+      // ignore
+    }
+  };
 
   // Visual Equation Modal state (insert new, pre-seeded template, OR edit existing chip)
   const [mathModalState, setMathModalState] = useState<{
@@ -500,18 +523,52 @@ export default function App() {
 
       {/* Single Compact Top Bar */}
       <header className="no-print h-[52px] lg:h-14 pt-safe px-3.5 sm:px-5 bg-white border-b border-zinc-200 flex items-center justify-between gap-3 sm:gap-6 shrink-0 z-30">
-        <span className="text-base font-bold tracking-tight text-zinc-950 whitespace-nowrap shrink-0">
-          ProshnoPatra
-        </span>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-base font-bold tracking-tight text-zinc-950 whitespace-nowrap shrink-0">
+            {t.brand}
+          </span>
+          <div className="inline-flex rounded-md border border-zinc-200 bg-zinc-100 p-0.5">
+            <button
+              type="button"
+              onClick={() => toggleUiLang('bn')}
+              className={`px-2 py-0.5 text-[11px] font-semibold rounded transition-colors cursor-pointer ${
+                uiLang === 'bn'
+                  ? 'bg-white text-zinc-950 shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              বাংলা
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleUiLang('en')}
+              className={`px-2 py-0.5 text-[11px] font-semibold rounded transition-colors cursor-pointer ${
+                uiLang === 'en'
+                  ? 'bg-white text-zinc-950 shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              EN
+            </button>
+          </div>
+        </div>
 
         {/* Desktop Nav & Actions */}
-        <div className="hidden lg:flex items-center gap-6 shrink-0">
+        <div className="hidden lg:flex items-center gap-5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setModalMode('templates')}
+            className="px-2.5 py-1 text-xs font-semibold text-[#0F4C81] bg-[#F0F6FC] hover:bg-[#E2EFFA] border border-[#0F4C81]/20 rounded transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            {t.newPaper}
+          </button>
+
           <button
             type="button"
             onClick={() => setModalMode('templates')}
             className="text-sm font-medium text-zinc-600 hover:text-zinc-950 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
-            Templates
+            {t.templates}
           </button>
 
           {/* Drafts Dropdown (Saved Papers + Import + Export) */}
@@ -522,7 +579,7 @@ export default function App() {
               aria-expanded={draftsOpen}
               className="inline-flex items-center gap-1 text-sm font-medium text-zinc-600 hover:text-zinc-950 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <span>Drafts</span>
+              <span>{t.drafts}</span>
               <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
             </button>
 
@@ -537,7 +594,7 @@ export default function App() {
                   className="w-full px-3.5 py-2 text-left text-xs font-medium text-zinc-800 hover:bg-zinc-50 flex items-center gap-2.5 cursor-pointer"
                 >
                   <FolderOpen className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Saved Papers ({savedPapers.length})</span>
+                  <span>{t.savedPapers} ({savedPapers.length})</span>
                 </button>
                 <button
                   type="button"
@@ -548,7 +605,7 @@ export default function App() {
                   className="w-full px-3.5 py-2 text-left text-xs font-medium text-zinc-800 hover:bg-zinc-50 flex items-center gap-2.5 cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Import Draft (.json)</span>
+                  <span>{t.importDraft}</span>
                 </button>
                 <button
                   type="button"
@@ -560,10 +617,10 @@ export default function App() {
                   className="w-full px-3.5 py-2 text-left text-xs font-medium text-zinc-800 hover:bg-zinc-50 flex items-center gap-2.5 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Export Draft (.json)</span>
+                  <span>{t.exportDraft}</span>
                 </button>
                 <div className="mt-1 pt-1.5 pb-1 px-3.5 border-t border-zinc-100 text-[11px] text-zinc-400">
-                  Auto-saved offline in browser
+                  {t.autoSavedOffline}
                 </div>
               </div>
             )}
@@ -582,7 +639,7 @@ export default function App() {
             ) : (
               <Printer className="w-3.5 h-3.5" />
             )}
-            <span>{isExporting ? 'Preparing PDF...' : 'Print / PDF'}</span>
+            <span>{isExporting ? t.preparingPdf : t.printPdf}</span>
           </button>
         </div>
 
@@ -631,9 +688,9 @@ export default function App() {
           >
             {(
               [
-                { id: 1 as const, label: '1. Setup' },
-                { id: 2 as const, label: '2. Questions' },
-                { id: 3 as const, label: '3. Style & Print' },
+                { id: 1 as const, label: t.step1 },
+                { id: 2 as const, label: t.step2 },
+                { id: 3 as const, label: t.step3 },
               ] as const
             ).map((s) => {
               const active = step === s.id;
@@ -667,6 +724,7 @@ export default function App() {
               <HeaderEditor
                 header={paper.header}
                 language={paper.settings.language}
+                uiLang={uiLang}
                 onChange={(header) => updatePaper((p) => ({ ...p, header }))}
               />
             )}
@@ -676,27 +734,27 @@ export default function App() {
                 {/* Quiet Questions Header */}
                 <div className="px-4 sm:px-5 py-3.5 border-b border-zinc-200 flex items-center justify-between gap-2 bg-white">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-sm font-semibold text-zinc-900">Questions</h2>
+                    <h2 className="text-sm font-semibold text-zinc-900">{t.questionsTitle}</h2>
                     {paper.questions.length > 0 && (
                       <button
                         type="button"
                         onClick={clearAllQuestions}
                         className="text-xs text-zinc-400 hover:text-red-600 transition-colors cursor-pointer"
                       >
-                        Clear all
+                        {t.clearAll}
                       </button>
                     )}
                   </div>
                   <span className="text-xs text-zinc-500 font-mono-num">
-                    {qCount} {qCount === 1 ? 'question' : 'questions'} · {totalMarks}
-                    {declaredMarks !== null ? ` / ${declaredMarks}` : ''} marks
+                    {qCount} · {totalMarks}
+                    {declaredMarks !== null ? ` / ${declaredMarks}` : ''} {t.marksWord}
                   </span>
                 </div>
 
                 {/* Single-Active Accordion Question List */}
                 {numberedEditorItems.length === 0 ? (
                   <div className="px-6 py-12 text-center text-sm text-zinc-500">
-                    No questions yet. Choose a question format below to start writing.
+                    {t.noQuestionsEmpty}
                   </div>
                 ) : (
                   <div>
@@ -708,6 +766,7 @@ export default function App() {
                         index={idx}
                         total={paper.questions.length}
                         language={paper.settings.language}
+                        uiLang={uiLang}
                         isExpanded={expandedQuestionId === item.id}
                         onToggleExpand={() =>
                           setExpandedQuestionId((prev) => (prev === item.id ? null : item.id))
@@ -716,6 +775,7 @@ export default function App() {
                         onMove={moveQuestion}
                         onDuplicate={duplicateQuestion}
                         onDelete={deleteQuestion}
+                        onAddAnother={(type) => addQuestion(type)}
                         onFocusTarget={(target) => {
                           activeMathTargetRef.current = { questionId: item.id, target };
                         }}
@@ -731,8 +791,17 @@ export default function App() {
 
                 {/* Add Question Bar */}
                 <div className="p-4 sm:p-5 bg-[#FAFAFB] border-b border-zinc-200">
-                  <div className="text-xs font-semibold text-zinc-700 mb-2.5">
-                    Add Question
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <div className="text-xs font-semibold text-zinc-700">
+                      {t.addQuestionTitle}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuickPasteOpen(true)}
+                      className="text-xs font-semibold text-[#0F4C81] hover:underline cursor-pointer"
+                    >
+                      {t.quickPasteMcqBtn}
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     <button
@@ -741,7 +810,7 @@ export default function App() {
                       className="flex items-center gap-2 px-3 min-h-[42px] sm:min-h-0 py-2 text-xs font-medium text-zinc-800 bg-white border border-zinc-200 hover:border-zinc-900 rounded transition-colors cursor-pointer text-left"
                     >
                       <FilePlus2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      <span className="truncate">Creative (CQ)</span>
+                      <span className="truncate">{t.qTypeCq}</span>
                     </button>
                     <button
                       type="button"
@@ -749,7 +818,7 @@ export default function App() {
                       className="flex items-center gap-2 px-3 min-h-[42px] sm:min-h-0 py-2 text-xs font-medium text-zinc-800 bg-white border border-zinc-200 hover:border-zinc-900 rounded transition-colors cursor-pointer text-left"
                     >
                       <ListChecks className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      <span className="truncate">MCQ (বহুনির্বাচনি)</span>
+                      <span className="truncate">{t.qTypeMcq}</span>
                     </button>
                     <button
                       type="button"
@@ -757,7 +826,7 @@ export default function App() {
                       className="flex items-center gap-2 px-3 min-h-[42px] sm:min-h-0 py-2 text-xs font-medium text-zinc-800 bg-white border border-zinc-200 hover:border-zinc-900 rounded transition-colors cursor-pointer text-left"
                     >
                       <Type className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      <span className="truncate">Short / Desc.</span>
+                      <span className="truncate">{t.qTypeShort}</span>
                     </button>
                     <button
                       type="button"
@@ -765,7 +834,7 @@ export default function App() {
                       className="flex items-center gap-2 px-3 min-h-[42px] sm:min-h-0 py-2 text-xs font-medium text-zinc-800 bg-white border border-zinc-200 hover:border-zinc-900 rounded transition-colors cursor-pointer text-left"
                     >
                       <BookOpen className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      <span className="truncate">Reading Passage</span>
+                      <span className="truncate">{t.qTypePassage}</span>
                     </button>
                     <button
                       type="button"
@@ -773,7 +842,7 @@ export default function App() {
                       className="flex items-center gap-2 px-3 min-h-[42px] sm:min-h-0 py-2 text-xs font-medium text-zinc-800 bg-white border border-zinc-200 hover:border-zinc-900 rounded transition-colors cursor-pointer text-left"
                     >
                       <Table2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      <span className="truncate">Table / Grammar</span>
+                      <span className="truncate">{t.qTypeTable}</span>
                     </button>
                     <button
                       type="button"
@@ -781,7 +850,7 @@ export default function App() {
                       className="flex items-center gap-2 px-3 min-h-[42px] sm:min-h-0 py-2 text-xs font-medium text-zinc-800 bg-white border border-zinc-200 hover:border-zinc-900 rounded transition-colors cursor-pointer text-left"
                     >
                       <Plus className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      <span className="truncate">Section Divider</span>
+                      <span className="truncate">{t.qTypeSection}</span>
                     </button>
                   </div>
                 </div>
@@ -792,6 +861,7 @@ export default function App() {
               <StylePrintStep
                 paper={paper}
                 isExporting={isExporting}
+                uiLang={uiLang}
                 onChangeSettings={updateSettings}
                 onDownloadPdf={handleDownloadPdf}
                 onPrint={handlePrintOrPdf}
@@ -809,7 +879,7 @@ export default function App() {
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-zinc-700 hover:text-zinc-950 border border-zinc-200 hover:border-zinc-400 rounded transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>{step === 2 ? 'Back to Setup' : 'Back to Questions'}</span>
+                  <span>{step === 2 ? t.backToSetup : t.backToQuestions}</span>
                 </button>
               )}
             </div>
@@ -821,7 +891,7 @@ export default function App() {
                   onClick={() => goToStep((step + 1) as WizardStep)}
                   className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded transition-colors cursor-pointer"
                 >
-                  <span>{step === 1 ? 'Next: Questions' : 'Next: Style & Print'}</span>
+                  <span>{step === 1 ? t.nextQuestions : t.nextStylePrint}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               ) : (
@@ -836,7 +906,7 @@ export default function App() {
                   ) : (
                     <Download className="w-3.5 h-3.5" />
                   )}
-                  <span>{isExporting ? 'Preparing PDF...' : 'Download A4 PDF'}</span>
+                  <span>{isExporting ? t.preparingPdf : t.downloadA4Pdf}</span>
                 </button>
               )}
             </div>
@@ -851,11 +921,11 @@ export default function App() {
         >
           {/* Quiet Preview Zoom Strip */}
           <div className="no-print px-3.5 sm:px-5 py-2 bg-[#F8F9FA] border-b border-zinc-200 flex items-center justify-between gap-2 text-xs text-zinc-500 shrink-0">
-            <span className="truncate">A4 Live Preview</span>
+            <span className="truncate">{t.a4LivePreview}</span>
             <div className="flex items-center gap-1 shrink-0">
               {(
                 [
-                  { label: 'Fit', value: 'fit' as const },
+                  { label: t.fit, value: 'fit' as const },
                   { label: '75%', value: 0.75 },
                   { label: '100%', value: 1 },
                   { label: '125%', value: 1.25 },
@@ -879,7 +949,23 @@ export default function App() {
 
           {/* Scrollable A4 Sheet */}
           <div className="flex-1 overflow-auto thin-scroll pb-20 lg:pb-0 print:overflow-visible print:pb-0 print:block">
-            <PaperPreview paper={paper} zoom={zoom} />
+            <PaperPreview
+              paper={paper}
+              zoom={zoom}
+              activeQuestionId={step === 2 ? expandedQuestionId : null}
+              onSelectHeader={() => goToStep(1)}
+              onSelectQuestion={(qId) => {
+                setStep(2);
+                setMobileView('editor');
+                setExpandedQuestionId(qId);
+                window.setTimeout(() => {
+                  document.getElementById(`q-editor-${qId}`)?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                  });
+                }, 40);
+              }}
+            />
           </div>
         </div>
       </main>
@@ -1036,10 +1122,74 @@ export default function App() {
         initialDisplay={mathModalState.initialDisplay}
         initialTemplate={mathModalState.initialTemplate}
         isEditing={Boolean(mathModalState.editRequest)}
+        uiLang={uiLang}
+        subjectHint={paper.header.subject}
         onClose={() => setMathModalState((s) => ({ ...s, open: false, initialTemplate: null }))}
         onConfirm={handleConfirmMath}
         onDeleteEquation={mathModalState.editRequest ? handleDeleteMathChip : undefined}
       />
+
+      {/* Quick Bulk MCQ Paste Modal */}
+      {quickPasteOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 no-print"
+          onClick={() => setQuickPasteOpen(false)}
+        >
+          <div
+            className="bg-white border border-zinc-200 rounded-xl w-full max-w-lg p-5 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-zinc-950">{t.quickPasteTitle}</h3>
+              <button
+                type="button"
+                onClick={() => setQuickPasteOpen(false)}
+                className="p-1 text-zinc-400 hover:text-zinc-900 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-zinc-500">{t.quickPasteDesc}</p>
+            <textarea
+              rows={8}
+              value={quickPasteText}
+              onChange={(e) => setQuickPasteText(e.target.value)}
+              placeholder={t.quickPastePlaceholder}
+              className="w-full text-sm p-3 border border-zinc-200 rounded-lg bg-white text-zinc-900 focus:border-[#0F4C81] focus:outline-none"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setQuickPasteOpen(false)}
+                className="px-3.5 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-950 cursor-pointer"
+              >
+                {t.quickPasteCancel}
+              </button>
+              <button
+                type="button"
+                disabled={!quickPasteText.trim()}
+                onClick={() => {
+                  const parsed = parseBulkMcqs(quickPasteText);
+                  if (parsed.length > 0) {
+                    updatePaper((p) => ({ ...p, questions: [...p.questions, ...parsed] }));
+                    setExpandedQuestionId(parsed[0].id);
+                    showNotice(
+                      uiLang === 'bn'
+                        ? `${parsed.length}টি MCQ যোগ করা হয়েছে`
+                        : `Added ${parsed.length} MCQs`
+                    );
+                  }
+                  setQuickPasteText('');
+                  setQuickPasteOpen(false);
+                }}
+                className="px-4 py-2 text-xs font-semibold bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-40 cursor-pointer"
+              >
+                {t.quickPasteAdd}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Templates & Saved Papers Modal */}
       <TemplateLibraryModal

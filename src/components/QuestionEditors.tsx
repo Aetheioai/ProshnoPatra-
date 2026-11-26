@@ -30,6 +30,7 @@ import {
   getRomanLabel,
 } from '../utils/formatters';
 import { QUICK_INLINE_MATH } from '../data/mathLibrary';
+import { UI_COPY, UiLang } from '../data/uiCopy';
 import { ImageAttachmentControl } from './ImageAttachmentControl';
 import { RichMathText } from './RichMathText';
 import { TableGridEditor } from './TableGridEditor';
@@ -42,12 +43,14 @@ interface QuestionCardEditorProps {
   index: number;
   total: number;
   language: Language;
+  uiLang?: UiLang;
   isExpanded: boolean;
   onToggleExpand: () => void;
   onChange: (updated: QuestionItem) => void;
   onMove: (from: number, to: number) => void;
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
+  onAddAnother?: (type: QuestionItem['type']) => void;
   onFocusTarget: (target: ActiveMathTarget) => void;
   onOpenInsertEquation: (template?: QuickMathTemplateKey) => void;
   onQuickInsertLatex: (latex: string) => void;
@@ -100,12 +103,14 @@ export const QuestionItemEditor: React.FC<QuestionCardEditorProps> = ({
   index,
   total,
   language,
+  uiLang = 'bn',
   isExpanded,
   onToggleExpand,
   onChange,
   onMove,
   onDuplicate,
   onDelete,
+  onAddAnother,
   onFocusTarget,
   onOpenInsertEquation,
   onQuickInsertLatex,
@@ -113,6 +118,7 @@ export const QuestionItemEditor: React.FC<QuestionCardEditorProps> = ({
 }) => {
   const marks = getQuestionMarks(item);
   const labels = getBoardLabels(language);
+  const t = UI_COPY[uiLang];
 
   return (
     <div
@@ -201,7 +207,16 @@ export const QuestionItemEditor: React.FC<QuestionCardEditorProps> = ({
 
       {/* Expanded Active Editor */}
       {isExpanded && (
-        <div className="px-4 sm:px-5 pb-5 pt-1 space-y-4">
+        <div
+          id={`q-editor-${item.id}`}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && onAddAnother) {
+              e.preventDefault();
+              onAddAnother(item.type);
+            }
+          }}
+          className="px-4 sm:px-5 pb-5 pt-1 space-y-4"
+        >
           {/* Active Question Action Strip: 1-Tap Quick Math + Visual Equation Builder */}
           {item.type !== 'section' && (
             <div className="py-2 border-y border-zinc-100 space-y-2">
@@ -213,7 +228,7 @@ export const QuestionItemEditor: React.FC<QuestionCardEditorProps> = ({
                   className="inline-flex items-center gap-1.5 px-2.5 min-h-[34px] text-xs font-semibold text-[#0F4C81] bg-[#F0F6FC] hover:bg-[#E2EFFA] border border-[#0F4C81]/25 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Sigma className="w-3.5 h-3.5" />
-                  <span>Equation Builder</span>
+                  <span>{t.equationBtn}</span>
                 </button>
 
                 <span className="h-4 w-px bg-zinc-200 shrink-0 mx-0.5" aria-hidden="true" />
@@ -237,9 +252,7 @@ export const QuestionItemEditor: React.FC<QuestionCardEditorProps> = ({
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-zinc-400">
-                Tap any rendered math chip in your text to edit it, or use quick buttons above.
-              </p>
+              <p className="text-[11px] text-zinc-400">{t.quickEquationHint}</p>
             </div>
           )}
 
@@ -292,6 +305,22 @@ export const QuestionItemEditor: React.FC<QuestionCardEditorProps> = ({
               onFocusTarget={onFocusTarget}
               onEditChip={onEditChip}
             />
+          )}
+
+          {onAddAnother && (
+            <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => onAddAnother(item.type)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#0F4C81] bg-[#F0F6FC] hover:bg-[#E2EFFA] rounded-md transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>
+                  {t.addAnotherPrefix} {getTypeName(item)}
+                </span>
+              </button>
+              <span className="text-[10px] text-zinc-400 hidden sm:inline">Ctrl + Enter</span>
+            </div>
           )}
         </div>
       )}

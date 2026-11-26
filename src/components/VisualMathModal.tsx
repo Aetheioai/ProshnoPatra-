@@ -46,6 +46,9 @@ import {
   updateSlotList,
 } from '../utils/mathAst';
 
+import { UI_COPY, UiLang } from '../data/uiCopy';
+import { convertWordLinearOnSpace, finalizeWordLinearToLatex } from '../utils/unicodeMath';
+
 export type QuickMathTemplateKey = 'frac' | 'sup' | 'sub' | 'sqrt' | 'int' | 'matrix';
 
 interface VisualMathModalProps {
@@ -54,6 +57,8 @@ interface VisualMathModalProps {
   initialDisplay?: boolean;
   initialTemplate?: QuickMathTemplateKey | null;
   isEditing: boolean;
+  uiLang?: UiLang;
+  subjectHint?: string;
   onClose: () => void;
   onConfirm: (latex: string, display: boolean) => void;
   onDeleteEquation?: () => void;
@@ -165,10 +170,30 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
   initialDisplay = false,
   initialTemplate = null,
   isEditing,
+  uiLang = 'bn',
+  subjectHint = '',
   onClose,
   onConfirm,
   onDeleteEquation,
 }) => {
+  const t = UI_COPY[uiLang];
+  const [builderMode, setBuilderMode] = useState<'simple' | 'pro'>(() => {
+    try {
+      return localStorage.getItem('proshnopatra_eq_mode_v1') === 'pro' ? 'pro' : 'simple';
+    } catch {
+      return 'simple';
+    }
+  });
+  const switchBuilderMode = (mode: 'simple' | 'pro') => {
+    setBuilderMode(mode);
+    try {
+      localStorage.setItem('proshnopatra_eq_mode_v1', mode);
+    } catch {
+      // ignore
+    }
+  };
+  const [wordLinearDraft, setWordLinearDraft] = useState('');
+  const wordLinearInputRef = useRef<HTMLInputElement>(null);
   const [nodes, setNodes] = useState<MathNode[]>([]);
   const [cursor, setCursor] = useState<MathCursor>({ path: [], index: 0 });
   const [history, setHistory] = useState<{ past: MathNode[][]; future: MathNode[][] }>({
@@ -194,6 +219,18 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
     setSearchQuery('');
     setShowRawLatex(false);
     setHistory({ past: [], future: [] });
+
+    // Auto-select relevant formula category from current paper subject
+    const subLower = subjectHint.toLowerCase();
+    if (subLower.includes('phys') || subjectHint.includes('পদার্থ')) {
+      setFormulaCategory('Physics');
+    } else if (subLower.includes('chem') || subjectHint.includes('রসায়ন') || subjectHint.includes('রসায়ন')) {
+      setFormulaCategory('Chemistry');
+    } else if (subLower.includes('bio') || subjectHint.includes('জীব')) {
+      setFormulaCategory('Biology');
+    } else {
+      setFormulaCategory('All');
+    }
 
     // Default to touch keypad on small mobile viewports, structures on desktop
     const isSmallScreen = typeof window !== 'undefined' && window.innerWidth < 640;
@@ -233,6 +270,7 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
     if (!showRawLatex) {
       setRawLatexDraft(liveLatex);
     }
+    setWordLinearDraft(liveLatex);
   }, [liveLatex, showRawLatex]);
 
   // Detect if cursor is inside a matrix so we can show quick +Row/+Col controls
@@ -1100,27 +1138,49 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
         />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3.5 border-b border-zinc-200 shrink-0">
+        <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-2.5 sm:py-3.5 border-b border-zinc-200 shrink-0">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-zinc-950 truncate">
-              {isEditing ? 'Edit Equation' : 'Equation Builder'}
+              {isEditing ? t.eqEditTitle : t.eqBuilderTitle}
             </h2>
             <p className="text-[11px] text-zinc-500 hidden sm:block mt-0.5">
-              Type directly (smart shortcuts: <code className="text-zinc-700">/</code> fraction,{' '}
-              <code className="text-zinc-700">^</code> power,{' '}
-              <code className="text-zinc-700">_</code> subscript,{' '}
-              <code className="text-zinc-700">pi</code>,{' '}
-              <code className="text-zinc-700">&gt;=</code>) or tap templates below.
+              {builderMode === 'simple' ? t.eqSimpleHint : t.eqProHint}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close equation editor"
-            className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950 rounded-lg cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-0.5">
+              <button
+                type="button"
+                onClick={() => switchBuilderMode('simple')}
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
+                  builderMode === 'simple'
+                    ? 'bg-white text-zinc-950 shadow-xs'
+                    : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                {t.eqSimpleMode}
+              </button>
+              <button
+                type="button"
+                onClick={() => switchBuilderMode('pro')}
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
+                  builderMode === 'pro'
+                    ? 'bg-white text-zinc-950 shadow-xs'
+                    : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                {t.eqProMode}
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close equation editor"
+              className="min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center p-1.5 text-zinc-500 hover:text-zinc-950 rounded-lg cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Sticky Top Builder Canvas + Controls + Live Preview */}
@@ -1271,30 +1331,78 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
 
           {/* Live Formatted Paper Preview + Optional LaTeX Toggle */}
           <div className="px-3 py-2 bg-[#F8F9FA] border border-zinc-200 rounded-md flex items-center justify-between gap-2 min-h-[42px]">
-            <span className="text-[11px] text-zinc-400 shrink-0 hidden sm:inline">Preview</span>
+            <span className="text-[11px] text-zinc-400 shrink-0 hidden sm:inline">{t.eqPreview}</span>
             <div className="flex-1 text-center overflow-x-auto text-sm sm:text-base text-black">
               {renderedPreviewHtml ? (
                 <span dangerouslySetInnerHTML={{ __html: renderedPreviewHtml }} />
               ) : (
-                <span className="text-xs text-zinc-400">Formatted preview</span>
+                <span className="text-xs text-zinc-400">{t.eqPreview}</span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setShowRawLatex((v) => !v)}
-              title="Toggle raw LaTeX code"
-              className={`px-2 py-1 text-[11px] font-medium rounded inline-flex items-center gap-1 transition-colors shrink-0 cursor-pointer ${
-                showRawLatex
-                  ? 'bg-zinc-900 text-white'
-                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/70'
-              }`}
-            >
-              <Code2 className="w-3 h-3" />
-              <span>LaTeX</span>
-            </button>
+            {builderMode === 'pro' && (
+              <button
+                type="button"
+                onClick={() => setShowRawLatex((v) => !v)}
+                title="Toggle raw LaTeX code"
+                className={`px-2 py-1 text-[11px] font-medium rounded inline-flex items-center gap-1 transition-colors shrink-0 cursor-pointer ${
+                  showRawLatex
+                    ? 'bg-zinc-900 text-white'
+                    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/70'
+                }`}
+              >
+                <Code2 className="w-3 h-3" />
+                <span>LaTeX</span>
+              </button>
+            )}
           </div>
 
-          {showRawLatex && (
+          {/* MS Word Linear Input Bar in Pro Mode */}
+          {builderMode === 'pro' && !showRawLatex && (
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-zinc-500 shrink-0 hidden sm:inline">
+                {t.eqLinearBar}:
+              </span>
+              <input
+                ref={wordLinearInputRef}
+                type="text"
+                value={wordLinearDraft}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setWordLinearDraft(val);
+                  const parsed = parseLatexToAst(finalizeWordLinearToLatex(val));
+                  setNodes(parsed);
+                  setCursor({ path: [], index: parsed.length });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === ' ') {
+                    const el = wordLinearInputRef.current;
+                    if (!el) return;
+                    const pos = el.selectionStart ?? wordLinearDraft.length;
+                    const before = wordLinearDraft.slice(0, pos);
+                    const after = wordLinearDraft.slice(pos);
+                    const converted = convertWordLinearOnSpace(before);
+                    if (converted !== null) {
+                      e.preventDefault();
+                      const nextVal = converted + ' ' + after;
+                      setWordLinearDraft(nextVal);
+                      const parsed = parseLatexToAst(finalizeWordLinearToLatex(nextVal));
+                      setNodes(parsed);
+                      setCursor({ path: [], index: parsed.length });
+                      const nextPos = converted.length + 1;
+                      window.requestAnimationFrame(() => el.setSelectionRange(nextPos, nextPos));
+                    }
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirm();
+                  }
+                }}
+                placeholder={t.eqInlinePlaceholder}
+                className="flex-1 text-xs font-mono px-2.5 py-1.5 border border-zinc-200 rounded-md bg-white text-zinc-900 focus:border-[#0F4C81] focus:outline-none"
+              />
+            </div>
+          )}
+
+          {builderMode === 'pro' && showRawLatex && (
             <input
               type="text"
               value={rawLatexDraft}
@@ -1305,28 +1413,200 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
           )}
         </div>
 
-        {/* Scrollable Category Tabs */}
-        <div className="px-3.5 sm:px-5 pt-2 pb-2 border-b border-zinc-200 bg-[#FAFAFB] shrink-0">
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setPaletteTab(t.id)}
-                className={`px-3 min-h-[34px] text-xs rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  paletteTab === t.id
-                    ? 'bg-zinc-900 text-white font-semibold'
-                    : 'text-zinc-600 hover:bg-zinc-200/70 hover:text-zinc-950 font-medium'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+        {/* Scrollable Category Tabs (Pro Mode only) */}
+        {builderMode === 'pro' && (
+          <div className="px-3.5 sm:px-5 pt-2 pb-2 border-b border-zinc-200 bg-[#FAFAFB] shrink-0">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setPaletteTab(tab.id)}
+                  className={`px-3 min-h-[34px] text-xs rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    paletteTab === tab.id
+                      ? 'bg-zinc-900 text-white font-semibold'
+                      : 'text-zinc-600 hover:bg-zinc-200/70 hover:text-zinc-950 font-medium'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Scrollable Palette Body */}
         <div className="flex-1 overflow-y-auto thin-scroll px-3.5 sm:px-5 py-3 space-y-3">
+          {builderMode === 'simple' && (
+            <div className="space-y-4">
+              {/* 1. Fill-in Shapes */}
+              <div>
+                <div className="text-[11px] font-semibold text-zinc-500 mb-2">
+                  {t.eqFillBoxes}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={insertFraction}
+                    className="p-2.5 border border-zinc-200 hover:border-[#0F4C81] hover:bg-[#F0F6FC] rounded-lg bg-white text-center cursor-pointer transition-colors"
+                  >
+                    <div className="text-base font-serif font-semibold text-zinc-900">
+                      <KatexPreviewInline latex="\frac{\square}{\square}" />
+                    </div>
+                    <div className="text-[11px] text-zinc-600 mt-1">
+                      {uiLang === 'bn' ? 'ভগ্নাংশ (a/b)' : 'Fraction (a/b)'}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={insertPower}
+                    className="p-2.5 border border-zinc-200 hover:border-[#0F4C81] hover:bg-[#F0F6FC] rounded-lg bg-white text-center cursor-pointer transition-colors"
+                  >
+                    <div className="text-base font-serif font-semibold text-zinc-900">
+                      <KatexPreviewInline latex="x^{\square}" />
+                    </div>
+                    <div className="text-[11px] text-zinc-600 mt-1">
+                      {uiLang === 'bn' ? 'পাওয়ার / ঘাত (x²)' : 'Power (x²)'}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertSqrt(false)}
+                    className="p-2.5 border border-zinc-200 hover:border-[#0F4C81] hover:bg-[#F0F6FC] rounded-lg bg-white text-center cursor-pointer transition-colors"
+                  >
+                    <div className="text-base font-serif font-semibold text-zinc-900">
+                      <KatexPreviewInline latex="\sqrt{\square}" />
+                    </div>
+                    <div className="text-[11px] text-zinc-600 mt-1">
+                      {uiLang === 'bn' ? 'বর্গমূল (√x)' : 'Square Root (√x)'}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={insertSubscript}
+                    className="p-2.5 border border-zinc-200 hover:border-[#0F4C81] hover:bg-[#F0F6FC] rounded-lg bg-white text-center cursor-pointer transition-colors"
+                  >
+                    <div className="text-base font-serif font-semibold text-zinc-900">
+                      <KatexPreviewInline latex="\text{H}_{\square}" />
+                    </div>
+                    <div className="text-[11px] text-zinc-600 mt-1">
+                      {uiLang === 'bn' ? 'নিচের সংখ্যা (H₂)' : 'Subscript (H₂)'}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Numbers & Basic Signs */}
+              <div>
+                <div className="text-[11px] font-semibold text-zinc-500 mb-2">
+                  {t.eqNumbersSigns}
+                </div>
+                <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5">
+                  {[
+                    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+                    '+', '-', '=', '(', ')', 'x', 'y', 'a', 'b', '.',
+                  ].map((ch) => (
+                    <button
+                      key={ch}
+                      type="button"
+                      onClick={() => insertNodesAtCursor([{ id: mathUid(), type: 'char', value: ch }])}
+                      className="min-h-[38px] flex items-center justify-center border border-zinc-200 hover:border-zinc-900 rounded-md bg-white text-sm font-medium text-zinc-900 cursor-pointer"
+                    >
+                      {ch}
+                    </button>
+                  ))}
+                  {[
+                    { d: '×', l: '\\times' },
+                    { d: '÷', l: '\\div' },
+                    { d: '±', l: '\\pm' },
+                    { d: '°', l: '^\\circ' },
+                    { d: 'θ', l: '\\theta' },
+                    { d: 'π', l: '\\pi' },
+                    { d: 'Δ', l: '\\Delta' },
+                    { d: 'Ω', l: '\\Omega' },
+                    { d: '→', l: '\\rightarrow' },
+                    { d: '⇌', l: '\\rightleftharpoons' },
+                  ].map((s) => (
+                    <button
+                      key={s.d}
+                      type="button"
+                      onClick={() => insertQuickFormula(s.l)}
+                      className="min-h-[38px] flex items-center justify-center border border-zinc-200 hover:border-zinc-900 rounded-md bg-[#F8F9FA] text-sm font-serif text-zinc-900 cursor-pointer"
+                    >
+                      {s.d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Ready NCTB Formulas (Physics, Chemistry, Biology, Math) */}
+              <div className="space-y-2">
+                <div className="text-[11px] font-semibold text-zinc-500">{t.eqReadyFormulas}</div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={
+                        uiLang === 'bn'
+                          ? 'সূত্র খুঁজুন (যেমন: ohm, motion, ph, photosynthesis...)'
+                          : 'Search formulas (ohm, motion, ph, photosynthesis...)'
+                      }
+                      className="w-full text-xs pl-8 pr-3 py-2 border border-zinc-200 rounded-lg bg-white text-zinc-900 placeholder:text-zinc-400"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    {['All', 'Physics', 'Chemistry', 'Biology', 'Algebra', 'Geometry & Trig'].map(
+                      (cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setFormulaCategory(cat)}
+                          className={`px-2.5 min-h-[32px] text-xs rounded-md border whitespace-nowrap shrink-0 cursor-pointer ${
+                            formulaCategory === cat
+                              ? 'bg-zinc-900 text-white border-zinc-900 font-medium'
+                              : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {filteredFormulas.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => insertQuickFormula(preset.latex)}
+                      className="p-2.5 text-left border border-zinc-200 hover:border-[#0F4C81] rounded-lg bg-white transition-colors cursor-pointer space-y-1 overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-zinc-900 truncate">
+                          {preset.title}
+                        </span>
+                        <span className="text-[10px] text-zinc-400 shrink-0">{preset.category}</span>
+                      </div>
+                      <div className="overflow-x-auto text-sm text-zinc-950">
+                        <KatexPreviewInline latex={preset.latex} />
+                      </div>
+                    </button>
+                  ))}
+                  {filteredFormulas.length === 0 && (
+                    <div className="col-span-full py-4 text-center text-xs text-zinc-400">
+                      No formulas matched &ldquo;{searchQuery}&rdquo;.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {builderMode === 'pro' && (
+            <>
           {/* TAB 1: TOUCH MATH KEYPAD */}
           {paletteTab === 'keypad' && (
             <div className="space-y-2.5">
@@ -1952,7 +2232,7 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
                   />
                 </div>
                 <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-                  {['All', 'Algebra', 'Geometry & Trig', 'Calculus', 'Physics', 'Chemistry'].map(
+                  {['All', 'Physics', 'Chemistry', 'Biology', 'Algebra', 'Geometry & Trig', 'Calculus'].map(
                     (cat) => (
                       <button
                         key={cat}
@@ -1998,6 +2278,8 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
               </div>
             </div>
           )}
+            </>
+          )}
         </div>
 
         {/* Sticky Footer */}
@@ -2010,7 +2292,7 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
                 onChange={(e) => setDisplayMode(e.target.checked)}
                 className="w-4 h-4 accent-zinc-900"
               />
-              <span className="whitespace-nowrap">Own line</span>
+              <span className="whitespace-nowrap">{uiLang === 'bn' ? 'আলাদা লাইনে' : 'Own line'}</span>
             </label>
             {isEditing && onDeleteEquation && (
               <button
@@ -2018,7 +2300,7 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
                 onClick={onDeleteEquation}
                 className="min-h-[36px] px-1 text-xs font-medium text-red-600 hover:underline cursor-pointer"
               >
-                Remove
+                {t.eqDelete}
               </button>
             )}
           </div>
@@ -2029,7 +2311,7 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
               onClick={onClose}
               className="min-h-[40px] px-3.5 text-xs font-medium text-zinc-600 hover:text-zinc-950 cursor-pointer"
             >
-              Cancel
+              {t.eqCancel}
             </button>
             <button
               type="button"
@@ -2037,7 +2319,7 @@ export const VisualMathModal: React.FC<VisualMathModalProps> = ({
               onClick={handleConfirm}
               className="min-h-[40px] px-4 text-xs font-semibold bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-40 transition-colors whitespace-nowrap cursor-pointer"
             >
-              {isEditing ? 'Update Equation' : 'Insert Equation'}
+              {isEditing ? t.eqSave : t.eqInsert}
             </button>
           </div>
         </div>

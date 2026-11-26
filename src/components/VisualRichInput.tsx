@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import katex from 'katex';
 import { tokenizeMathText } from '../utils/formatters';
+import { convertProseMathOnSpace } from '../utils/unicodeMath';
+import { InlineEquationPill } from './InlineEquationPill';
 
 export interface ActiveMathTarget {
   insertMath: (latex: string, display: boolean) => void;
@@ -132,6 +134,7 @@ export const VisualRichInput: React.FC<VisualRichInputProps> = ({
   const lastEmittedRef = useRef<string | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const isComposingRef = useRef(false);
+  const [inlineEqOpen, setInlineEqOpen] = useState(false);
 
   // Sync DOM only when external value changes (not during user's own typing)
   useEffect(() => {
@@ -239,6 +242,105 @@ export const VisualRichInput: React.FC<VisualRichInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Microsoft Word shortcut: Alt + = opens inline equation pill at caret
+    if (e.altKey && (e.key === '=' || e.code === 'Equal')) {
+      e.preventDefault();
+      saveSelection();
+      setInlineEqOpen(true);
+      return;
+    }
+
+    // Direct inline equation typing in prose: Spacebar auto-converts x^2, H_2, 1/2, \theta, \sqrt(x), ->, >=
+    if (
+      e.key === ' ' &&
+      !isComposingRef.current &&
+      !e.altKey &&
+      !e.ctrlKey &&
+      !e.metaKey
+    ) {
+      const sel = window.getSelection();
+      const el = editorRef.current;
+      if (sel && el && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        if (range.collapsed && range.startContainer.nodeType === Node.TEXT_NODE) {
+          const textNode = range.startContainer as Text;
+          const fullText = textNode.textContent ?? '';
+          const offset = range.startOffset;
+          const before = fullText.slice(0, offset);
+          const match = convertProseMathOnSpace(before);
+          if (match) {
+            e.preventDefault();
+            const prefix = fullText.slice(0, offset - match.consumedChars);
+            const suffix = fullText.slice(offset);
+            const parent = textNode.parentNode;
+            if (parent) {
+              const chip = createChipElement(match.latex, false, 0);
+              const spacer = document.createTextNode(' ' + suffix);
+              textNode.textContent = prefix;
+              parent.insertBefore(chip, textNode.nextSibling);
+              parent.insertBefore(spacer, chip.nextSibling);
+
+              const nextRange = document.createRange();
+              nextRange.setStart(spacer, 1);
+              nextRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(nextRange);
+              savedRangeRef.current = nextRange.cloneRange();
+              emitChange();
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // Direct inline $...$ closing delimiter
+    if (
+      e.key === '$' &&
+      !isComposingRef.current &&
+      !e.altKey &&
+      !e.ctrlKey &&
+      !e.metaKey
+    ) {
+      const sel = window.getSelection();
+      const el = editorRef.current;
+      if (sel && el && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        if (range.collapsed && range.startContainer.nodeType === Node.TEXT_NODE) {
+          const textNode = range.startContainer as Text;
+          const fullText = textNode.textContent ?? '';
+          const offset = range.startOffset;
+          const before = fullText.slice(0, offset);
+          const dollarIdx = before.lastIndexOf('$');
+          if (dollarIdx !== -1 && (dollarIdx === 0 || before[dollarIdx - 1] !== '$')) {
+            const latex = before.slice(dollarIdx + 1).trim();
+            if (latex.length > 0) {
+              e.preventDefault();
+              const prefix = fullText.slice(0, dollarIdx);
+              const suffix = fullText.slice(offset);
+              const parent = textNode.parentNode;
+              if (parent) {
+                const chip = createChipElement(latex, false, 0);
+                const spacer = document.createTextNode(suffix.startsWith(' ') ? suffix : ' ' + suffix);
+                textNode.textContent = prefix;
+                parent.insertBefore(chip, textNode.nextSibling);
+                parent.insertBefore(spacer, chip.nextSibling);
+
+                const nextRange = document.createRange();
+                nextRange.setStart(spacer, 1);
+                nextRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(nextRange);
+                savedRangeRef.current = nextRange.cloneRange();
+                emitChange();
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+
     if (!multiline && e.key === 'Enter') {
       e.preventDefault();
     }
@@ -291,6 +393,18 @@ export const VisualRichInput: React.FC<VisualRichInputProps> = ({
         <span className="pointer-events-none absolute left-2.5 top-2 sm:top-1.5 text-sm text-zinc-400 select-none truncate right-2.5">
           {placeholder}
         </span>
+      )}
+      {inlineEqOpen && (
+        <InlineEquationPill
+          onCommit={(latex) => {
+            setInlineEqOpen(false);
+            targetApiRef.current.insertMath(latex, false);
+          }}
+          onCancel={() => {
+            setInlineEqOpen(false);
+            editorRef.current?.focus();
+          }}
+        />
       )}
     </div>
   );
